@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="siteSwitch">
+<head>
+    <meta charset="UTF-8">
+    <title>Site Switch</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .form-inline input.form-control {
+            width: 500px;
+        }
+
+        .ng-cloak {
+            display: none !important;
+        }
+    </style>
+</head>
+<body ng-controller="sitesConfig" ng-esc="stopSwitch()">
+    <div class="container">
+        <div class="jumbotron">
+            <h1>Site Switch</h1>
+            <p>Display multiple websites on one screen by switching between sites on a schedule.</p>
+        </div>
+        <p>
+            Enter the sites below that you would like to switch between.
+        </p>
+        <ul>
+            <li class="ng-cloak" ng-repeat="site in config.sites track by site.url">
+                {{site.url}} - {{site.duration/1000}} seconds
+                <a href="javascript:void(0)" ng-click="removeSite(site.url)">Remove</a>
+            </li>
+        </ul>
+        <form name="urlForm" class="form-inline" novalidate>
+            <div class="form-group">
+                <input type="url" class="form-control" ng-model="selection.url" id="websiteUrl" placeholder="Website URL" required="">
+            </div>
+            <div class="form-group">
+                <select class="form-control" ng-model="selection.duration">
+                    <option value="5000">5 seconds</option>
+                    <option value="10000">10 seconds</option>
+                    <option value="20000">20 seconds</option>
+                    <option value="30000">30 seconds</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" ng-click="addSite(siteUrl)" ng-disabled="urlForm.$invalid" class="btn btn-primary">Add Site</button>
+            <button class="btn btn-success" ng-disabled="!config.sites.length" ng-click="siteSwitch()">Site Switch</button>
+            <p>
+                <em>Press the ESC key to stop the current site switch.</em>
+            </p>
+        </form>
+        <iframe ng-src="{{trustUrl(site.url)}}" frameborder="0" ng-repeat="site in config.sites track by site.url" ng-if="config.switching" ng-show="site.active">
+        </iframe>
+    </div>
+
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.js"></script>
+<script>
+    angular.module('siteSwitch', [])
+        .directive('ngEsc', function () {
+            return function (scope, element, attrs) {
+                element.bind("keydown keypress keyup", function (event) {
+                    if (event.which === 27) {
+                        scope.$apply(function () {
+                            scope.$eval(attrs.ngEsc);
+                        });
+
+                        event.preventDefault();
+                    }
+                });
+            };
+        }).controller('sitesConfig', function($scope, $sce, $timeout) {
+            var currentSite = -1, timer = null;
+            var config = $scope.config = {
+                sites: [
+                    { url: 'https://dudeci.dudesoln.com/', duration: 5000},
+                    { url: 'http://dudestats.dudesoln.com/', duration: 5000}
+                ],
+                switching: false
+            };
+
+            $scope.selection = { url: 'https://', duration: '10000' };
+            $scope.addSite = function() {
+                config.sites.push({ url: $scope.selection.url, duration: parseInt($scope.selection.duration) });
+                $scope.selection.url = 'https://';
+            }
+
+            $scope.removeSite = function(siteUrl) {
+                for (var i = 0; i < config.sites.length; ++i) {
+                    var url = config.sites[i].url;
+
+                    if (url == siteUrl) {
+                        config.sites.splice(i, 1);
+                    }
+                }
+            }
+
+            $scope.trustUrl = function(url) {
+                return $sce.trustAsResourceUrl(url);
+            }
+
+            $scope.stopSwitch = function() {
+                if (timer) {
+                    $timeout.cancel(timer);
+                    $scope.config.switching = false;
+                    for (var i = 0; i < config.sites.length; ++i) {
+                        config.sites[i].active = false;
+                    }
+
+                    timer = null;
+                }
+            }
+
+            $scope.siteSwitch = function() {
+
+                $scope.config.switching = true;
+                if (config.sites[currentSite]) {
+                    config.sites[currentSite].active = false;
+                }
+
+                if (++currentSite >= config.sites.length) {
+                    currentSite = 0;
+                }
+
+                if (config.sites[currentSite]) {
+                    config.sites[currentSite].active = true;
+                }
+
+                if (config.sites.length > 1) {
+                    timer = $timeout($scope.siteSwitch, config.sites[currentSite].duration || 5000)
+                }
+            }
+        });
+</script>
+</html>
