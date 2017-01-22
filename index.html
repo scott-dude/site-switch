@@ -81,10 +81,7 @@
         }).controller('sitesConfig', function($scope, $sce, $timeout) {
             var currentSite = -1, timer = null;
             var config = $scope.config = {
-                sites: [
-                    { url: 'https://dudeci.dudesoln.com/', duration: 5000},
-                    { url: 'http://dudestats.dudesoln.com/', duration: 5000}
-                ],
+                sites: [],
                 switching: false
             };
 
